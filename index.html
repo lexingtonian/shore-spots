@@ -238,7 +238,7 @@ function popupHtml(s) {
   <dt>Location</dt><dd>${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</dd></dl>
   <div class="links"><a target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${s.lat},${s.lon}&heading=${s.deg}">Street View</a>
   <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}">Google Maps</a>
-  <a target="_blank" rel="noopener" href="https://asiointi.maanmittauslaitos.fi/karttapaikka/?lang=en&share=customMarker&n=${s.lat}&e=${s.lon}&zoom=12">Karttapaikka (aerial)</a></div></div>`;
+  <a target="_blank" rel="noopener" href="https://asiointi.maanmittauslaitos.fi/karttapaikka/?lang=en&share=customMarker&n=${s.tm[0]}&e=${s.tm[1]}&title=${encodeURIComponent(s.dir + " " + s.deg + "°")}&zoom=12">Karttapaikka (aerial)</a></div></div>`;
 }
 function render(data) {
   clear();
