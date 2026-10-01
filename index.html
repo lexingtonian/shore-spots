@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Lake and sea shore photo spots with a clear 60° open-water view, reachable on public roads and paths.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>html, body { margin: 0; } * { box-sizing: border-box; }</style>
+<title>Open Shore Spots</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+
+/* Layout: a map that fills the screen with a reading panel beside it (below it on phones) —
+   a field guide laid over a plain cartographic base. */
+:root {
+  --bg: #f3f1ea; --panel: #fbfaf6; --fg: #1f2a2e; --muted: #5d6a6e; --line: #dcd8cc;
+  --land: #ece8dc; --water: #b9d3df; --water-edge: #7aa4b8; --road1: #c48a4a; --road2: #b7ab92; --road3: #d3ccba; --street: #ffffff; --street-edge: #cfc8b6; --path: #9c7b55; --bld: #c9c1b0;
+  --label: #3c4a4f; --halo: #f3f1ea; --accent: #2f6f8f; --sel: #e6eef1;
+  --green: #1d8a42; --yellow: #c99a00; --red: #c23b2c; --wedge-op: .18;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #161b1d; --panel: #1b2124; --fg: #e4e8e6; --muted: #9aa6a8; --line: #2c3539;
+  --land: #20272a; --water: #1f3a48; --water-edge: #3f6f86; --road1: #b07a3e; --road2: #6d6656; --road3: #4a4740;
+  --street: #3b4246; --street-edge: #2b3134; --path: #a58a66; --bld: #3a3f3d;
+  --label: #c9d1cf; --halo: #161b1d; --accent: #7fb6cf; --sel: #24323a;
+  --green: #3fb867; --yellow: #e0b52c; --red: #e0614f; --wedge-op: .24; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #161b1d; --panel: #1b2124; --fg: #e4e8e6; --muted: #9aa6a8; --line: #2c3539;
+  --land: #20272a; --water: #1f3a48; --water-edge: #3f6f86; --road1: #b07a3e; --road2: #6d6656; --road3: #4a4740;
+  --street: #3b4246; --street-edge: #2b3134; --path: #a58a66; --bld: #3a3f3d;
+  --label: #c9d1cf; --halo: #161b1d; --accent: #7fb6cf; --sel: #24323a;
+  --green: #3fb867; --yellow: #e0b52c; --red: #e0614f; --wedge-op: .24; color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--f-body); }
+.app { display: grid; grid-template-columns: 380px 1fr; height: 100%; }
+.panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; min-width: 0; }
+#map { background: var(--land); min-height: 0; }
+header { padding: 18px 18px 10px; display: grid; gap: 6px; }
+h1 { font: 700 30px/1 var(--f-display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 60ch; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 18px 10px; }
+.tab { font: 600 15px/1 var(--f-display); letter-spacing: .03em; text-transform: uppercase; padding: 8px 10px 7px;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); border-radius: 4px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+.tab:focus-visible, .cls input:focus-visible + .sw, .row:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.areahead { padding: 0 18px 8px; color: var(--muted); font-size: 13px; }
+.cls { display: grid; gap: 8px; padding: 8px 18px 14px; border-bottom: 1px solid var(--line); }
+.cls label { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: start; cursor: pointer; font-size: 14px; }
+.cls input { position: absolute; opacity: 0; pointer-events: none; }
+.sw { width: 16px; height: 16px; border-radius: 50%; margin-top: 2px; border: 2px solid var(--c); background: var(--c); }
+.cls input:not(:checked) + .sw { background: transparent; }
+.cls b { font-weight: 600; }
+.cls .n { font: 500 13px var(--f-data); color: var(--muted); font-variant-numeric: tabular-nums; }
+.cls .d { color: var(--muted); }
+details.about { border-bottom: 1px solid var(--line); padding: 10px 18px; }
+details.about summary { cursor: pointer; font: 600 16px var(--f-display); letter-spacing: .03em; text-transform: uppercase; }
+details.about div { display: grid; gap: 8px; padding-top: 8px; font-size: 14px; max-width: 62ch; }
+details.about p { margin: 0; }
+.list h2 { font: 600 14px var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  margin: 0; padding: 12px 18px 6px; position: sticky; top: 0; background: var(--panel); }
+.row { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 10px; padding: 8px 18px; border-top: 1px solid var(--line); cursor: pointer; }
+.row:hover, .row.on { background: var(--sel); }
+.row .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-top: 6px; grid-row: span 2; }
+.row .t { font-weight: 600; }
+.row .m { color: var(--muted); font-size: 13px; grid-column: 2 / 4; min-width: 0; overflow-wrap: anywhere; }
+.row .o { font: 500 13px var(--f-data); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { padding: 16px 18px; color: var(--muted); }
+.place { font: 600 12px/1 var(--f-body); color: var(--label); white-space: nowrap; pointer-events: none;
+  text-shadow: 0 0 3px var(--halo), 0 0 3px var(--halo), 0 0 2px var(--halo); }
+.place.big { font: 700 15px/1 var(--f-display); letter-spacing: .04em; text-transform: uppercase; }
+.place.small { font-weight: 400; font-size: 11px; }
+.place.lake { font: italic 400 13px/1 var(--f-body); color: var(--water-edge); }
+.leaflet-container { font: 14px var(--f-body); background: var(--land); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--fg); }
+.leaflet-popup-content { margin: 12px 14px; min-width: 240px; }
+.pop h3 { margin: 0 0 4px; font: 700 18px var(--f-display); display: flex; gap: 8px; align-items: center; }
+.pop .chip { font: 600 12px/1 var(--f-display); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--c); padding: 4px 6px 3px; border-radius: 3px; }
+.pop .why { color: var(--muted); margin: 0 0 8px; }
+.pop dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0 0 8px; }
+.pop dt { color: var(--muted); }
+.pop dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pop .links { display: flex; flex-wrap: wrap; gap: 12px; }
+.pop a { color: var(--accent); }
+.leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--muted); }
+.leaflet-control-attribution a { color: var(--accent); }
+.leaflet-bar a { background: var(--panel); color: var(--fg); border-color: var(--line); }
+.loading { position: absolute; inset: auto 0 16px 0; margin: auto; width: max-content; z-index: 500; background: var(--panel);
+  border: 1px solid var(--line); padding: 6px 12px; border-radius: 4px; color: var(--muted); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: 55% 45%; }
+  #map { grid-row: 1; } .panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+  h1 { font-size: 26px; }
+}
+@media (prefers-reduced-motion: reduce) { .leaflet-zoom-anim .leaflet-zoom-animated { transition: none !important; } }
+</style>
+
+<div class="app">
+  <aside class="panel" aria-label="Spots">
+    <header>
+      <h1>Open Shore Spots</h1>
+      <p class="lede">Shore places with a clear 60° view over open water, reachable on public roads and paths without crossing anyone's yard.</p>
+    </header>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Area"></nav>
+    <div class="areahead" id="areahead"></div>
+    <div class="cls" id="cls"></div>
+    <details class="about">
+      <summary>How to read this map</summary>
+      <div>
+        <p><b>Every spot</b> is reached along public roads and paths from a road you can stop on or a public car park, plus at most 30 m of open ground to the water. Inside a park, beach, nature reserve, or on open rock or sand, the walk to the water may be up to 300 m, and from a public car park up to 150 m; the spot's details say so.</p>
+        <p><b>Privacy:</b> spots stay at least 50 m from homes and holiday homes, unless a public road or path runs between. Islands count only if a bridge leads there.</p>
+        <p><b>View:</b> each spot has a 60° wedge where every line of sight reaches at least 500 m of open water. Islands further out are part of the view. Tap a spot to see its wedge.</p>
+        <p><b>Spots are not ranked.</b> The colour says what kind of place it is, not how good the view is. The list runs north to south.</p>
+        <p><b>Check before you go.</b> The data has gaps: a path may be missing, a car park unmapped, a cottage new. Use the Street View and Karttapaikka links in each spot.</p>
+        <p><b>Data:</b> © OpenStreetMap contributors (ODbL); LIPAS, University of Jyväskylä; National Land Survey of Finland topographic database, maps and aerial photos (CC BY 4.0). Results from 1 October 2026.</p>
+      </div>
+    </details>
+    <div class="list" id="list"></div>
+  </aside>
+  <div id="map" role="region" aria-label="Map"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+const AREAS = [{"key": "pyhajarvi", "name": "Pyhäjärvi", "sub": "Tampere, Pirkkala, Nokia, Lempäälä", "n": 110, "by": {"green": 86, "yellow": 22, "red": 2}}, {"key": "nasijarvi", "name": "Näsijärvi", "sub": "Tampere, Ylöjärvi, Ruovesi — incl. Palovesi to Ruhala", "n": 101, "by": {"green": 63, "yellow": 36, "red": 2}}, {"key": "paijanne", "name": "Päijänne", "sub": "Jyväskylä to Asikkala", "n": 367, "by": {"green": 159, "yellow": 185, "red": 23}}, {"key": "coast_uki_merikarvia", "name": "Bothnian Sea coast", "sub": "Uusikaupunki to Merikarvia", "n": 169, "by": {"green": 99, "yellow": 65, "red": 5}}];
+const TILES = {"key": "dfcb7c72-4e7b-4e62-a7af-5c6e9ea1dcc4"};      // null on claude.ai (drawn base map); {key} on the public site (NLS map tiles)
+const CLS = {
+  green: { t: "Green", d: "Parks, beaches, nature reserves, viewpoints and walking paths: places people go to spend time." },
+  yellow: { t: "Yellow", d: "Roadside where you can stop. Traffic may be an issue, but no home within 50 m." },
+  red: { t: "Red", d: "Reachable only along a pavement or street, or homes nearby across the road." },
+};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const km = m => m >= 20000 ? "the horizon" : m >= 1000 ? (m / 1000).toFixed(1) + " km" : m + " m";
+const map = L.map("map", { preferCanvas: true, zoomControl: true, attributionControl: true, maxZoom: 18 }).setView([61.5, 23.6], 9);
+map.attributionControl.setPrefix(false);
+map.attributionControl.addAttribution("© OpenStreetMap contributors · LIPAS · NLS");
+if (TILES) {
+  const mml = (layer, ext) => L.tileLayer(
+    `https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/${layer}/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.${ext}?api-key=${TILES.key}`,
+    { maxZoom: 18, attribution: "Map © National Land Survey of Finland (CC BY 4.0)" });
+  const bases = { "Topographic map (NLS)": mml("maastokartta", "png"), "Aerial photo (NLS)": mml("ortokuva", "jpg"),
+                  "Background map (NLS)": mml("taustakartta", "png"),
+                  "OpenStreetMap": L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap contributors" }) };
+  bases["Topographic map (NLS)"].addTo(map);
+  L.control.layers(bases, null, { position: "topright" }).addTo(map);
+}
+let layers = [], spotItems = [], on = { green: true, yellow: true, red: false }, current = null, labels = [];
+
+function dest(lat, lon, az, d) {
+  const R = 6371000, a = az * Math.PI / 180, p1 = lat * Math.PI / 180, l1 = lon * Math.PI / 180, dr = d / R;
+  const p2 = Math.asin(Math.sin(p1) * Math.cos(dr) + Math.cos(p1) * Math.sin(dr) * Math.cos(a));
+  const l2 = l1 + Math.atan2(Math.sin(a) * Math.sin(dr) * Math.cos(p1), Math.cos(dr) - Math.sin(p1) * Math.sin(p2));
+  return [p2 * 180 / Math.PI, l2 * 180 / Math.PI];
+}
+function clear() { layers.forEach(l => l.remove()); labels.forEach(l => l.m.remove()); layers = []; labels = []; spotItems = []; }
+function roadStyle(c) {
+  return c === "1" ? { color: css("--road1"), weight: 2.2 } : c === "2" ? { color: css("--road2"), weight: 1.4 } : { color: css("--road3"), weight: 1 };
+}
+function refreshZoom() {
+  const z = map.getZoom();
+  const minZ = { city: 0, town: 0, "lake-big": 9, village: 11, suburb: 12, lake: 11, island: 12, hamlet: 13, quarter: 13,
+                 neighbourhood: 14, "lake-small": 13, locality: 14, islet: 14, isolated_dwelling: 15 };
+  labels.forEach(l => { (z >= (minZ[l.t] ?? 13)) ? l.m.addTo(map) : l.m.remove(); });
+  if (z >= 13 && !TILES) loadDetail();
+  roadLayers.forEach(r => { const show = r.c === "1" || (r.c === "2" && z >= 10) || z >= 12; show ? r.l.addTo(map) : r.l.remove(); });
+}
+let roadLayers = [];
+// Detail near the spots (streets, paths, building outlines), drawn per map tile on a canvas.
+let detail = null, detailLoading = false, detailLayer = null;
+const CELL = 0.01, cellKey = (la, lo) => Math.floor(la / CELL) + "," + Math.floor(lo / CELL);
+function indexFeatures(list) {
+  const idx = new Map();
+  list.forEach((coords, i) => {
+    let a = 90, b = -90, c = 180, d = -180;
+    for (const p of coords) { if (p[1] < a) a = p[1]; if (p[1] > b) b = p[1]; if (p[0] < c) c = p[0]; if (p[0] > d) d = p[0]; }
+    for (let la = Math.floor(a / CELL); la <= Math.floor(b / CELL); la++)
+      for (let lo = Math.floor(c / CELL); lo <= Math.floor(d / CELL); lo++) {
+        const k = la + "," + lo; if (!idx.has(k)) idx.set(k, []); idx.get(k).push(i);
+      }
+  });
+  return idx;
+}
+const DetailLayer = L.GridLayer.extend({
+  createTile(coords) {
+    const tile = document.createElement("canvas"), size = this.getTileSize();
+    tile.width = size.x; tile.height = size.y;
+    if (!detail || coords.z < 13) return tile;
+    const ctx = tile.getContext("2d"), x0 = coords.x * size.x, y0 = coords.y * size.y;
+    const nw = map.unproject([x0, y0], coords.z), se = map.unproject([x0 + size.x, y0 + size.y], coords.z);
+    const pick = (kind) => {
+      const seen = new Set(), out = [];
+      for (let la = Math.floor(se.lat / CELL); la <= Math.floor(nw.lat / CELL); la++)
+        for (let lo = Math.floor(nw.lng / CELL); lo <= Math.floor(se.lng / CELL); lo++)
+          for (const i of (detail.idx[kind].get(la + "," + lo) || [])) if (!seen.has(i)) { seen.add(i); out.push(detail[kind][i]); }
+      return out;
+    };
+    const px = p => { const q = map.project([p[1], p[0]], coords.z); return [q.x - x0, q.y - y0]; };
+    const trace = (coordsList, close) => { ctx.beginPath(); coordsList.forEach((p, j) => { const [x, y] = px(p); j ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); if (close) ctx.closePath(); };
+    const z = coords.z, w = z >= 16 ? 2 : z >= 15 ? 1.4 : 1;
+    if (z >= 14) { ctx.fillStyle = css("--bld"); for (const b of pick("bld")) { trace(b, true); ctx.fill(); } }
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const s of pick("street")) { trace(s); ctx.strokeStyle = css("--street-edge"); ctx.lineWidth = 3.2 * w; ctx.stroke(); ctx.strokeStyle = css("--street"); ctx.lineWidth = 2 * w; ctx.stroke(); }
+    ctx.setLineDash([3 * w, 2.5 * w]); ctx.strokeStyle = css("--path"); ctx.lineWidth = 1.2 * w;
+    for (const p of pick("path")) { trace(p); ctx.stroke(); }
+    return tile;
+  }
+});
+async function loadDetail() {
+  if (detail || detailLoading || !current) return;
+  detailLoading = true; const key = current;
+  const box = document.createElement("div"); box.className = "loading"; box.textContent = "Loading streets, paths and buildings…";
+  document.getElementById("map").appendChild(box);
+  try {
+    const d = await (await fetch("data/" + key + "_detail.json")).json();
+    if (current !== key) return;
+    d.idx = { street: indexFeatures(d.street), path: indexFeatures(d.path), bld: indexFeatures(d.bld) };
+    detail = d;
+    detailLayer = new DetailLayer({ minZoom: 13, maxZoom: 19, tileSize: 256, updateWhenZooming: false }).addTo(map);
+  } catch (e) { /* the base map still works without the detail */ }
+  finally { detailLoading = false; box.remove(); }
+}
+function popupHtml(s) {
+  const C = CLS[s.cls];
+  const other = s.views.length ? s.views.map(v => `${v[0]}° · open to ${km(v[1])}`).join("<br>") : "—";
+  const walk = s.walk > 30 ? `${Math.round(s.walk)} m across open ground` : `${Math.round(s.walk)} m`;
+  return `<div class="pop" style="--c:${css("--" + s.cls)}"><h3><span class="chip">${C.t}</span> ${s.dir} · ${s.deg}°</h3>
+  <p class="why">${s.why.replace(/ — .*$/, "")}</p>
+  <dl><dt>View</dt><dd>60° open to ${km(s.open)}${s.isl ? ", islands 0.5–3 km out" : ""}</dd>
+  <dt>Other views</dt><dd>${other}</dd>
+  <dt>Access</dt><dd>${s.access}, ${walk} to the water</dd>
+  <dt>Nearest home</dt><dd>${s.bldg != null ? s.bldg + " m" : "—"}</dd>
+  <dt>Location</dt><dd>${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</dd></dl>
+  <div class="links"><a target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${s.lat},${s.lon}&heading=${s.deg}">Street View</a>
+  <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}">Google Maps</a>
+  <a target="_blank" rel="noopener" href="https://asiointi.maanmittauslaitos.fi/karttapaikka/?lang=en&share=customMarker&n=${s.lat}&e=${s.lon}&zoom=12">Karttapaikka (aerial)</a></div></div>`;
+}
+function render(data) {
+  clear();
+  if (!TILES) drawBaseMap(data);
+  renderSpots(data);
+}
+function drawBaseMap(data) {
+  const water = L.polygon(data.water.map(poly => poly.map(ring => ring.map(p => [p[1], p[0]]))),
+    { color: css("--water-edge"), weight: 0.8, fillColor: css("--water"), fillOpacity: 1, interactive: false }).addTo(map);
+  layers.push(water);
+  data.lakes.forEach(l => labels.push({ t: l.a >= 5 ? "lake-big" : l.a >= 1 ? "lake" : "lake-small",
+    m: L.marker([l.lat, l.lon], { interactive: false, keyboard: false,
+      icon: L.divIcon({ className: "", html: `<span class="place lake">${l.n}</span>`, iconSize: null, iconAnchor: [0, 6] }) }) }));
+  detail = null; detailLoading = false; if (detailLayer) { detailLayer.remove(); detailLayer = null; }
+  roadLayers = Object.entries(data.roads).map(([c, lines]) => ({ c, l: L.polyline(lines.map(line => line.map(p => [p[1], p[0]])), { ...roadStyle(c), interactive: false }) }));
+  roadLayers.forEach(r => layers.push(r.l));
+  data.places.forEach(p => {
+    const big = p.t === "city" || p.t === "town", small = ["locality", "isolated_dwelling", "islet", "neighbourhood", "hamlet"].includes(p.t);
+    labels.push({ t: p.t, m: L.marker([p.lat, p.lon], { interactive: false, keyboard: false,
+      icon: L.divIcon({ className: "", html: `<span class="place${big ? " big" : small ? " small" : ""}">${p.n}</span>`, iconSize: null, iconAnchor: [0, 6] }) }) });
+  });
+}
+function renderSpots(data) {
+  const list = document.getElementById("list"); list.innerHTML = "";
+  const groups = {};
+  for (const k of ["green", "yellow", "red"]) {
+    const h = document.createElement("h2"), g = document.createElement("div");
+    list.append(h, g); groups[k] = { h, g, n: 0 };
+  }
+  data.spots.forEach(s => {
+    const color = css("--" + s.cls);
+    const cone = s.rays.filter(r => Math.abs(((r[0] - s.deg + 540) % 360) - 180) <= 30);
+    const wedge = L.polygon([[s.lat, s.lon], ...cone.map(r => dest(s.lat, s.lon, r[0], Math.max(Math.min(r[1], 6000), 30)))],
+      { color, weight: 1, fillColor: color, fillOpacity: parseFloat(css("--wedge-op")), interactive: false });
+    const mk = L.circleMarker([s.lat, s.lon], { radius: 6.5, color: css("--panel"), weight: 1.5, fillColor: color, fillOpacity: 1 });
+    mk.bindPopup(() => popupHtml(s), { maxWidth: 320 });
+    mk.on("popupopen", () => wedge.addTo(map)); mk.on("popupclose", () => wedge.remove());
+    const row = document.createElement("div");
+    row.className = "row"; row.tabIndex = 0; row.style.setProperty("--c", color);
+    row.innerHTML = `<span class="dot"></span><span class="t">${s.dir} · ${s.deg}°</span><span class="o">${km(s.open)}</span>
+      <span class="m">${s.why.replace(/ — .*$/, "")}</span>`;
+    const open = () => { document.querySelectorAll(".row.on").forEach(e => e.classList.remove("on")); row.classList.add("on");
+      if (!on[s.cls]) toggle(s.cls, true); map.setView([s.lat, s.lon], 15, { animate: false }); mk.openPopup(); };
+    row.onclick = open; row.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+    groups[s.cls].g.appendChild(row); groups[s.cls].n++;
+    spotItems.push({ cls: s.cls, mk, wedge, row });
+  });
+  for (const k in groups) groups[k].h.textContent = `${CLS[k].t} · ${groups[k].n}`;
+  if (!data.spots.length) list.innerHTML = '<p class="empty">No spots in this area.</p>';
+  buildClassToggles(groups);
+  map.fitBounds(L.latLngBounds(data.spots.map(s => [s.lat, s.lon])).pad(0.08), { animate: false });
+  refreshZoom(); applyToggles();
+}
+function buildClassToggles(groups) {
+  const el = document.getElementById("cls"); el.innerHTML = "";
+  for (const k of ["green", "yellow", "red"]) {
+    const l = document.createElement("label"); l.style.setProperty("--c", css("--" + k));
+    l.innerHTML = `<input type="checkbox" id="cls-${k}" ${on[k] ? "checked" : ""}><span class="sw"></span>
+      <span><b>${CLS[k].t}</b> <span class="d">${CLS[k].d}</span></span><span class="n">${groups[k].n}</span>`;
+    l.querySelector("input").onchange = e => toggle(k, e.target.checked);
+    el.appendChild(l);
+  }
+}
+function toggle(k, v) { on[k] = v; const cb = document.getElementById("cls-" + k); if (cb) cb.checked = v; applyToggles(); }
+function applyToggles() {
+  spotItems.forEach(it => { if (on[it.cls]) it.mk.addTo(map); else { it.mk.remove(); it.wedge.remove(); } });
+  document.querySelectorAll(".list h2").forEach((h, i) => { const k = ["green", "yellow", "red"][i]; h.hidden = !on[k]; h.nextElementSibling.hidden = !on[k]; });
+}
+map.on("zoomend", refreshZoom);
+
+const cache = {};
+async function selectArea(key) {
+  const a = AREAS.find(x => x.key === key) || AREAS[0];
+  current = a.key;
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.key === a.key));
+  document.getElementById("areahead").textContent = `${a.sub} · ${a.n} spots`;
+  if (location.hash.slice(1) !== a.key) history.replaceState(null, "", "#" + a.key);
+  const box = document.createElement("div"); box.className = "loading"; box.textContent = "Loading " + a.name + "…";
+  document.getElementById("map").appendChild(box);
+  try {
+    cache[a.key] = cache[a.key] || await (await fetch("data/" + a.key + ".json")).json();
+    if (current === a.key) render(cache[a.key]);
+  } catch (e) {
+    document.getElementById("list").innerHTML = `<p class="empty">Couldn't load ${a.name}. Reload the page to try again.</p>`;
+  } finally { box.remove(); }
+}
+const tabs = document.getElementById("tabs");
+AREAS.forEach(a => {
+  const b = document.createElement("button");
+  b.className = "tab"; b.setAttribute("role", "tab"); b.dataset.key = a.key; b.textContent = a.name; b.id = "tab-" + a.key;
+  b.onclick = () => selectArea(a.key);
+  tabs.appendChild(b);
+});
+window.addEventListener("hashchange", () => selectArea(location.hash.slice(1)));
+selectArea(location.hash.slice(1) || AREAS[0].key);
+</script>
+
+</html>
